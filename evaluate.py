@@ -48,8 +48,12 @@ def get_test_dataset(load_file: str) -> Tuple[Dataset, Dataset]:
         Dataset: Loaded dataset.
     '''
     ## Load the dataset
-    df = pd.read_csv(os.path.join(config.DATASETS_PATH, load_file))
-    dataset = YourDataset(df, config.WINDOW, normilize=True, to_tensors=True)
+    '''
+    The code for creating a dataset instance goes here, etc:
+        df = pd.read_csv(os.path.join(config.DATASETS_PATH, dataset_path))
+        dataset = YourDataset(df, config.WINDOW, normilize=True, to_tensors=True)
+    '''
+    dataset = YourDataset(...)
 
     return dataset
 
