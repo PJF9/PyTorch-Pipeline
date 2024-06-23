@@ -40,6 +40,5 @@ Follow these steps to use the pipeline effectively. The steps guide you through 
 * Follow best practices for data preprocessing and model evaluation to achieve optimal results.
 * Contributions and feedback are welcome. Please feel free to open issues or submit pull requests.
 
--
 
 Happy training!
