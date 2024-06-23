@@ -9,8 +9,6 @@ from torch.utils.data import Dataset
 
 import optuna
 
-import pandas as pd
-
 
 # Get the logger for this module
 logger = configure_logger(__name__)
