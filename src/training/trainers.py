@@ -139,6 +139,31 @@ class Trainer:
         
         return train_dl, valid_dl, offset
 
+    def _force_kill(method: Callable) -> Callable:
+        '''
+        Decorator function to handle KeyboardInterrupt during method execution.
+        
+        Args:
+        method (Callable): The method to decorate. Should be an instance method with self as the first parameter.
+
+        Returns:
+        Callable: Decorated method that handles KeyboardInterrupt. If no interruption occurs, returns the original method result.
+        '''
+        def wrapper(self, *args, **kwargs):
+            try:
+                # Execute the decorated method
+                res = method(self, *args, **kwargs)
+            except KeyboardInterrupt:
+                # Handle KeyboardInterrupt
+                Trainer.logger.info('Force kill activated, stop training.')
+                save_model(self.model, f'{self.model.__class__.__name__}_forcekill.pth')
+                raise KeyboardInterrupt('User stopped execution.')
+            else:
+                # Return the result of the decorated method
+                return res
+
+        return wrapper
+
     def _process_data_loaders(self, dl: DataLoader) -> Tuple[float, float]:
         '''
         Process batches from a DataLoader for either training or validation.
