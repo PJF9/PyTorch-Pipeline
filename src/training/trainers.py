@@ -139,7 +139,78 @@ class Trainer:
         
         return train_dl, valid_dl, offset
 
-    def _training_step(self, train_dl: DataLoader) -> Tuple[float, float]:
+    def _process_data_loaders(self, dl: DataLoader) -> Tuple[float, float]:
+        '''
+        Process batches from a DataLoader for either training or validation.
+
+        This method iterates over batches of data from a given DataLoader (`dl`), computes
+        the loss and evaluation metrics for each batch, and optionally performs gradient 
+        descent (backpropagation) if the model is in training mode.
+
+        Args:
+            dl (DataLoader): DataLoader containing batches of data.
+
+        Returns:
+            Tuple[float, float]: A tuple containing the average batch loss and evaluation 
+                score across all batches in the DataLoader.
+        '''
+        # Initialize batch loss and accuracy
+        batch_loss, batch_eval = 0.0, 0.0
+
+        phase = 'Training Step' if self.model.training else 'Validation Step'
+    
+        for x_batch, y_batch in tqdm(dl, ascii=True, desc=f'             {phase}'):
+            # Moving batches to device
+            x_batch, y_batch = x_batch.to(self.device, non_blocking=True), y_batch.to(self.device, non_blocking=True)
+
+            # Generating predictions (forward pass)
+            model_logits = self.model(x_batch)
+            model_preds = torch.round(torch.sigmoid(model_logits))
+
+            # Calculate loss
+            loss = self.criterion(model_logits.reshape(-1), y_batch)
+            batch_loss += loss.item()
+            batch_eval += self.eval_fn(model_preds.detach().cpu().numpy(), y_batch.detach().cpu().numpy())
+
+            # Backward pass and optimizer step (only for training)
+            if self.model.training:
+                self.opt.zero_grad()
+                loss.backward()
+                self.opt.step()
+
+        batch_loss /= len(dl)
+        batch_eval /= len(dl)
+
+        return batch_loss, batch_eval
+    
+    def _process_data_loaders_list(self, dl: List[DataLoader]) -> Tuple[float, float]:
+        '''
+        Processes a list of DataLoader instances for training or validation.
+
+        Args:
+            dl (List[DataLoader]): List of DataLoader instances, each representing a different dataset.
+
+        Returns:
+            Tuple[float, float]: A tuple containing the average loss and evaluation score across all DataLoader instances.
+        '''
+        # Initialize loss and accuracy
+        batch_loss = []
+        batch_eval = []
+
+        for loader in dl:
+            loader_loss, loader_eval = self._process_data_loaders(loader)
+
+            # Append results for the current DataLoader to the batch lists
+            batch_loss.append(loader_loss)
+            batch_eval.append(loader_eval)
+
+        # Calculate overall average loss and evaluation score across all DataLoaders
+        avg_loss = sum(batch_loss) / len(batch_loss)
+        avg_eval = sum(batch_eval) / len(batch_eval)
+
+        return avg_loss, avg_eval
+    
+    def _training_step(self, train_dl: Union[DataLoader, List[DataLoader]]) -> Tuple[float, float]:
         '''
         Performs a single training step over the training DataLoader.
 
@@ -149,73 +220,18 @@ class Trainer:
         Returns:
             Tuple[float, float]: The average training loss and evaluation score for the epoch.
         '''
-        # Initialize training loss and accuracy
-        train_loss, train_eval = 0.0, 0.0
-
         self.model.train()
-        for x_train, y_train in tqdm(train_dl, ascii=True, desc='             Training Step'):
-            # Moving batches to device
-            x_train, y_train = x_train.to(self.device, non_blocking=True), y_train.to(self.device, non_blocking=True)
 
-            # Generating predictions (forward pass)
-            model_logits = self.model(x_train)
-            model_preds = torch.round(torch.sigmoid(model_logits))
+        if self.from_list:
+            train_loss, train_eval = self._process_data_loaders_list(train_dl)
+        else:
+            train_loss, train_eval = self._process_data_loaders(train_dl)
 
-            # Calculate loss
-            loss = self.criterion(model_logits.reshape(-1), y_train)
-            train_loss += loss.item()
-            train_eval += self.eval_fn(model_preds.detach().cpu().numpy(), y_train.detach().cpu().numpy())
-
-            # Updating Model's parameters (backward pass)
-            self.opt.zero_grad()
-            loss.backward()
-            self.opt.step()
-
-        train_loss /= len(train_dl)
-        train_eval /= len(train_dl)
-
+        self.model.eval()
+        
         return train_loss, train_eval
     
-    def _training_step_list(self, train_dl: DataLoader) -> Tuple[float, float]:
-        '''
-        Performs a single training step over the training list of DataLoaders.
-
-        Args:
-            train_dl (DataLoader): The training dataloader that will fit the model.
-
-        Returns:
-            Tuple[float, float]: The average training loss and evaluation score for the epoch.
-        '''
-        # Initialize training loss and accuracy
-        train_loss = [0 for _ in range(len(train_dl))]
-        train_eval = [0 for _ in range(len(train_dl))]
-
-        self.model.train()
-        for i, loader in enumerate(train_dl):
-            for x_train, y_train in tqdm(loader, ascii=True, desc=f'             Training Step {i+1}'):
-                # Moving batches to device
-                x_train, y_train = x_train.to(self.device, non_blocking=True), y_train.to(self.device, non_blocking=True)
-
-                # Generating predictions (forward pass)
-                model_logits = self.model(x_train)
-                model_preds = torch.round(torch.sigmoid(model_logits))
-
-                # Calculate loss
-                loss = self.criterion(model_logits.reshape(-1), y_train)
-                train_loss[i] += loss.item()
-                train_eval[i] += self.eval_fn(model_preds.detach().cpu().numpy(), y_train.detach().cpu().numpy())
-
-                # Updating Model's parameters (backward pass)
-                self.opt.zero_grad()
-                loss.backward()
-                self.opt.step()
-
-            train_loss[i] /= len(loader)
-            train_eval[i] /= len(loader)
-
-        return sum(train_loss)/len(train_loss), sum(train_eval)/len(train_eval)
-
-    def _validation_step(self, valid_dl: DataLoader) -> Tuple[float, float]:
+    def _validation_step(self, valid_dl: Union[DataLoader, List[DataLoader]]) -> Tuple[float, float]:
         '''
         Performs a single validation step over the validation DataLoader.
 
@@ -225,66 +241,23 @@ class Trainer:
         Returns:
             Tuple[float, float]: The average validation loss and evaluation score for the epoch.
         '''
-        # Initialize validation loss and accuracy
-        valid_loss, valid_eval = 0.0, 0.0
-
         self.model.eval()
+
         with torch.inference_mode():
-            for x_valid, y_valid in tqdm(valid_dl, ascii=True, desc='             Validation Step'):
-                # Moving batches to model's device
-                x_valid, y_valid = x_valid.to(self.device, non_blocking=True), y_valid.to(self.device, non_blocking=True)
-
-                # Generate Predictions
-                model_logits = self.model(x_valid)
-                model_preds = torch.round(torch.sigmoid(model_logits))
-
-                valid_loss += self.criterion(model_logits.reshape(-1), y_valid).item()
-                valid_eval += self.eval_fn(model_preds.detach().cpu().numpy(), y_valid.detach().cpu().numpy())
-
-            valid_loss /= len(valid_dl)
-            valid_eval /= len(valid_dl)
+            if self.from_list:
+                valid_loss, valid_eval = self._process_data_loaders_list(valid_dl)
+            else:
+                valid_loss, valid_eval = self._process_data_loaders(valid_dl)
 
         return valid_loss, valid_eval
-    
-    def _validation_step_list(self, valid_dl: DataLoader) -> Tuple[float, float]:
-        '''
-        Performs a single validation step over the list of validation DataLoaders.
 
-        Args:
-            valid_dl (DataLoader): The validation loader to evaluate the model.
-
-        Returns:
-            Tuple[float, float]: The average validation loss and evaluation score for the epoch.
-        '''
-        # Initialize validation loss and accuracy
-        valid_loss = [0 for _ in range(len(valid_dl))]
-        valid_eval = [0 for _ in range(len(valid_dl))]
-
-        self.model.eval()
-        with torch.inference_mode():
-            for i, loader in enumerate(valid_dl):
-                for x_valid, y_valid in tqdm(loader, ascii=True, desc=f'             Validation Step {i+1}'):
-                    # Moving batches to model's device
-                    x_valid, y_valid = x_valid.to(self.device, non_blocking=True), y_valid.to(self.device, non_blocking=True)
-
-                    # Generate Predictions
-                    model_logits = self.model(x_valid)
-                    model_preds = torch.round(torch.sigmoid(model_logits))
-
-                    valid_loss[i] += self.criterion(model_logits.reshape(-1), y_valid).item()
-                    valid_eval[i] += self.eval_fn(model_preds.detach().cpu().numpy(), y_valid.detach().cpu().numpy())
-
-                valid_loss[i] /= len(loader)
-                valid_eval[i] /= len(loader)
-        
-        return sum(valid_loss)/len(valid_loss), sum(valid_eval)/len(valid_eval)
-
+    @_force_kill
     def fit(self,
             epochs: int,
             save_per: Union[int, None]=None,
             save_path: Union[str, None]=None,
             cross_validate: bool=False
-        ) -> Dict[str, Union[List[int], str, int]]:
+        ) -> Dict[str, Union[List[float], str, int]]:
         '''
         Trains the model for a specified number of epochs and optionally saves checkpoints.
 
@@ -292,7 +265,7 @@ class Trainer:
             epochs (int): The number of epochs to train the model for.
             save_per (Union[int, None], optional): Frequency (in epochs) to save model checkpoints. Defaults to None.
             save_path (Union[str, None], optional): The path that the checkpoints will be saved on. Defaults to None.
-            cross_validate (bool, optional): Wheather the user wants to use cross validation or not. Default is False.
+            cross_validate (bool, optional): Whether to use cross-validation. Default is False.
 
         Returns:
             Dict[str, Union[List[float], str, int]]: A dictionary containing training statistics and metadata.
@@ -316,10 +289,7 @@ class Trainer:
         valid_losses, valid_evals = [], []
 
         # the variable of cross validation
-        if self.from_list:
-            offset = [0 for _ in range(len(self.dataset))]
-        else:
-            offset = 0
+        offset = [0 for _ in range(len(self.dataset))] if self.from_list else 0
 
         Trainer.logger.info('Start Training Process.')
 
@@ -339,16 +309,11 @@ class Trainer:
                 Trainer.logger.info('    Dataloaders created succesfully.')
 
             # Training and Evaluating the Model
-            if self.from_list:
-                train_loss, train_eval = self._training_step_list(train_dl)
-                valid_loss, valid_eval = self._validation_step_list(valid_dl)
-                Trainer.logger.info('')
-            else:
-                train_loss, train_eval = self._training_step(train_dl)
-                valid_loss, valid_eval = self._validation_step(valid_dl)
-                Trainer.logger.info('')
+            train_loss, train_eval = self._training_step(train_dl)
+            valid_loss, valid_eval = self._validation_step(valid_dl)
 
             # Log the results
+            Trainer.logger.info('')
             Trainer.logger.info(f'    Results (lr={self.opt.param_groups[0]["lr"]:.6f}):')
             Trainer.logger.info(f'    Train Loss:       {train_loss:.4f}')
             Trainer.logger.info(f'    Train Eval Score: {train_eval:.4f}')
@@ -372,12 +337,13 @@ class Trainer:
                 self.stopper(valid_loss)
 
                 if self.stopper.early_stop:
-                    Trainer.logger.info(f'    Early Stopping activated.')
+                    Trainer.logger.info(f'    Early Stopping activated, stop training.')
                     save_model(self.model, f'{self.model.__class__.__name__}_stopped.pth')
                     break
                 else:
-                    Trainer.logger.info(f'    Early Stopping failed, continue training.')
+                    Trainer.logger.info(f'    Early Stopping not activated, continue training.')
 
+            # Saving the model
             if save_per and save_path and (epoch % save_per == 0):
                 save_model(self.model, f'{save_path}/{self.model.__class__.__name__}_checkpoint_{epoch}.pth')
 
