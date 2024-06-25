@@ -16,7 +16,7 @@ Follow these steps to use the pipeline effectively. The steps guide you through 
 
 ### Step 3: Configure the Scripts
 1. Dataset Configuration:
-    * Update the dataset name in `src.dataset.__init__.py`, `train.py`, `evaluate.py`, and `hyperparameter_tuning.py`.
+    * Update the dataset name in `src.dataset.__init__.py`, `src.utils.data.py`, `train.py`, `evaluate.py`, and `hyperparameter_tuning.py`.
 
 2. Model Configuration:
     * Update the model name in `src.models.__init__.py`, `train.py`, `evaluate.py`, and `hyperparameter_tuning.py`.
@@ -26,11 +26,11 @@ Follow these steps to use the pipeline effectively. The steps guide you through 
     * Adjust the suggestions on the `objective` function as needed.
 
 4. Training Script:
-    * In `train.py`, modify the **config** and **model_kwards** dictionaries.
+    * In `train.py`, modify the **config** and **model_kwards** dictionaries, and modify the script to suit your dataset.
     * The current setup trains a model on list of multiple datasets. To train on a single dataset, refer to `hyperparameter_tuning.py` and adjust accordingly.
 
 5. Evaluation Script:
-    * In `evaluate.py`, update the **config** and **model_kwards** dictionaries.
+    * In `evaluate.py`, update the **config** and **model_kwards** dictionaries, and modify the script to suit your dataset.
     * Ensure the correct path and class for the pre-trained model are specified when loading it.
 
 ---------------
