@@ -1,10 +1,8 @@
-from src.dataset.SignalDatasetLagged import SignalDatasetLagged
+from src.dataset import YourDataset
 from src.utils.log import configure_logger
-from src.utils.visualization import plot_price
 
 from torch.utils.data import Dataset
 
-import pandas as pd
 import os
 from typing import List, Union
 
@@ -15,7 +13,7 @@ logger = configure_logger(__name__)
 
 def get_dataset_statistics(dataset: Dataset) -> float:
     '''
-    Return the percentage of buying signal in the dataset
+    Return the percentage of positive in the dataset
 
     Args:
         dataset (Dataset): The dataset to be examined
@@ -30,13 +28,13 @@ def get_dataset_statistics(dataset: Dataset) -> float:
     return ones / len(dataset)
 
 
-def get_signal_datasets_lagged(
+def get_datasets(
         datasets_path: str,
         window: int,
         n_test: int = 1,
         normalize: bool = True,
         l: int = 0,
-    ) -> List[SignalDatasetLagged]:
+    ) -> List[YourDataset]:
     '''
     Prepare training and validation datasets.
 
@@ -51,8 +49,7 @@ def get_signal_datasets_lagged(
 
     for dataset_file in os.listdir(datasets_path)[n_test:]: # Keeping the first 'n' datasets as the testing sets
         # Load the dataset
-        df = pd.read_csv(os.path.join(datasets_path, dataset_file))
-        dataset = SignalDatasetLagged(df, window, normalize=normalize, to_tensors=True, l=l)
+        dataset = YourDataset(..., window, normalize=normalize, to_tensors=True, l=l)
         
         datasets.append(dataset)
 
@@ -76,7 +73,7 @@ def get_signal_dataset_lagged(
         normalize: bool=True,
         l: int=0,
         save_path: Union[str, None]=None
-    ) -> SignalDatasetLagged:
+    ) -> YourDataset:
     '''
     Load the training and validation dataset
 
@@ -88,14 +85,10 @@ def get_signal_dataset_lagged(
     '''
     dataset_file = os.path.join(datasets_path, f'{ticker}.csv')
 
-    df = pd.read_csv(dataset_file)
-    dataset = SignalDatasetLagged(df, window, normalize=normalize, to_tensors=True, l=l)
+    dataset = YourDataset(..., window, normalize=normalize, to_tensors=True, l=l)
 
     ratio = get_dataset_statistics(dataset)
 
     logger.info(f'Dataset `{dataset_file}` has been loaded (with {len(dataset)} samples, and {ratio*100:.2f}% positive).')
-
-    if save_path:
-        plot_price(df['Close'], save_path=os.path.join(save_path, f'{ticker}.png'))
 
     return dataset
