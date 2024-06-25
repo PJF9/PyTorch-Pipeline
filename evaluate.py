@@ -1,14 +1,18 @@
 from src.dataset import YourDataset
 from src.models import TransformerEncoderAll
 from src.evaluation import Evaluator
-from src.utils import configure_logger, load_model, get_device
+from src.utils import (
+    configure_logger,
+    load_model,
+    get_device,
+    get_dataset
+)
 
 from torch import nn
 from torch.utils.data import Dataset
 
-import pandas as pd
 import os
-from typing import Tuple, Dict
+from typing import Dict
 
 
 # Get the logger for this module
@@ -35,27 +39,6 @@ model_kwards = dict(
     activation = 'gelu',
     dropout = 0.2
 )
-
-
-def get_test_dataset(load_file: str) -> Tuple[Dataset, Dataset]:
-    '''
-    Load the test dataset.
-
-    Args:
-        load_file (str): Filename of the dataset to load.
-
-    Returns:
-        Dataset: Loaded dataset.
-    '''
-    ## Load the dataset
-    '''
-    The code for creating a dataset instance goes here, etc:
-        df = pd.read_csv(os.path.join(config.DATASETS_PATH, dataset_path))
-        dataset = YourDataset(df, config.WINDOW, normilize=True, to_tensors=True)
-    '''
-    dataset = YourDataset(...)
-
-    return dataset
 
 
 def evaluate(model: nn.Module, dataset: Dataset, loss_fn: nn.Module, file: str) -> Dict[str, int]:
@@ -90,8 +73,8 @@ def evaluate(model: nn.Module, dataset: Dataset, loss_fn: nn.Module, file: str) 
 def main() -> None:
     '''Main function to evaluate the deep learning model.'''
 
-    test_ds_1 = get_test_dataset(load_file='file1.csv')
-    test_ds_2 = get_test_dataset(load_file='file2.csv')
+    test_ds_1 = get_dataset(datasets_path, load_file='file1.csv')
+    test_ds_2 = get_dataset(load_file='file2.csv')
     
     # Instanciate the Model and load the pre-trained
     model = load_model(
