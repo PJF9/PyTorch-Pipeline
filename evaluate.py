@@ -73,8 +73,8 @@ def evaluate(model: nn.Module, dataset: Dataset, loss_fn: nn.Module, file: str) 
 def main() -> None:
     '''Main function to evaluate the deep learning model.'''
 
-    test_ds_1 = get_dataset(datasets_path, load_file='file1.csv')
-    test_ds_2 = get_dataset(load_file='file2.csv')
+    test_ds_1 = get_dataset(config.DATASETS_PATH, load_file='file1.csv')
+    test_ds_2 = get_dataset(config.DATASETS_PATH, load_file='file2.csv')
     
     # Instanciate the Model and load the pre-trained
     model = load_model(
