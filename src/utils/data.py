@@ -30,26 +30,30 @@ def get_dataset_statistics(dataset: Dataset) -> float:
 
 def get_datasets(
         datasets_path: str,
-        window: int,
         n_test: int = 1,
-        normalize: bool = True,
-        l: int = 0,
     ) -> List[YourDataset]:
     '''
     Prepare training and validation datasets.
 
+    This function loads datasets from the specified directory, processes them, and 
+    returns a list of training and validation datasets. The first 'n_test' datasets 
+    in the directory are reserved for testing and are not included in the returned list.
+
     Args:
+        Modify the arguments as you please!
+
+        datasets_path (str): Path to the directory containing dataset files.
         n_test (int, optional): Number of datasets to use for testing. Defaults to 1.
 
     Returns:
-        List[Dataset]: The List of datasets.
+        List[YourDataset]: The list of processed training and validation datasets.
     '''
     datasets = []
     overall_ratio = 0
 
     for dataset_file in os.listdir(datasets_path)[n_test:]: # Keeping the first 'n' datasets as the testing sets
         # Load the dataset
-        dataset = YourDataset(..., window, normalize=normalize, to_tensors=True, l=l)
+        dataset = YourDataset(...)
         
         datasets.append(dataset)
 
@@ -68,23 +72,23 @@ def get_datasets(
 
 def get_dataset(
         datasets_path: str,
-        window: int,
         file: str,
-        normalize: bool=True,
-        l: int=0,
     ) -> YourDataset:
     '''
-    Load the training and validation dataset
+    Load a specific dataset for training and validation.
+
+    This function loads a dataset file from the specified directory, processes it, and returns the dataset.
 
     Args:
-        ticker (str): The name of the stock that will be used to create the dataset object
+        datasets_path (str): Path to the directory containing dataset files.
+        file (str): The name of the file (without extension) to be loaded.
 
     Returns:
-        Dataset: The loaded dataset.
+        YourDataset: The loaded and processed dataset.
     '''
     dataset_file = os.path.join(datasets_path, f'{file}.csv')
 
-    dataset = YourDataset(..., window, normalize=normalize, to_tensors=True, l=l)
+    dataset = YourDataset(...)
 
     ratio = get_dataset_statistics(dataset)
 
