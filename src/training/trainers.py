@@ -157,6 +157,11 @@ class Trainer:
                 # Handle KeyboardInterrupt
                 Trainer.logger.info('Force kill activated, stop training.')
                 save_model(self.model, f'{self.model.__class__.__name__}_forcekill.pth')
+
+                # Clear the CUDA cache
+                if self.device.type == 'cuda':
+                    torch.cuda.empty_cache()
+
                 raise KeyboardInterrupt('User stopped execution.')
             else:
                 # Return the result of the decorated method
@@ -378,6 +383,10 @@ class Trainer:
             Trainer.logger.info('Training Process Completed Successfully.')
         else:
             Trainer.logger.info('Training Process Stopped Early.')
+
+        # After training, clear the CUDA cache
+        if self.device.type == 'cuda':
+            torch.cuda.empty_cache()
 
         return {
             'train_loss': train_losses,
