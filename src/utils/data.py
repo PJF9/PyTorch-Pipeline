@@ -66,13 +66,12 @@ def get_datasets(
     return datasets
 
 
-def get_signal_dataset_lagged(
+def get_dataset(
         datasets_path: str,
         window: int,
-        ticker: str,
+        file: str,
         normalize: bool=True,
         l: int=0,
-        save_path: Union[str, None]=None
     ) -> YourDataset:
     '''
     Load the training and validation dataset
@@ -83,7 +82,7 @@ def get_signal_dataset_lagged(
     Returns:
         Dataset: The loaded dataset.
     '''
-    dataset_file = os.path.join(datasets_path, f'{ticker}.csv')
+    dataset_file = os.path.join(datasets_path, f'{file}.csv')
 
     dataset = YourDataset(..., window, normalize=normalize, to_tensors=True, l=l)
 
